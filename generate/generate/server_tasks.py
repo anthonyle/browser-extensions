@@ -112,7 +112,7 @@ def minify_in_place(build, *files):
 	'''Minify a JS or CSS file, without renaming it.
 	'''
 	real_files = [utils.render_string(build.config, f) for f in files]
-	minify.minify_in_place(build.source_dir, *real_files)
+	# minify.minify_in_place(build.source_dir, *real_files)
 
 @task
 def addon_source(build, *directories):

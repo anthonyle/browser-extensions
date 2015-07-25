@@ -16,6 +16,73 @@ var button;
 var workers = [];
 var background;
 
+var lists_regexes = [];
+
+var req = request.Request({
+  url: 'https://adb.joinhoney.com/lists',
+  onComplete: function (res) {
+    console.log( res.json );
+    updateList(res.json);
+  }
+}).get();
+
+var updateList = function(data) {
+  try {
+    lists_regexes = data.lists.map(function(list) { return new RegExp(list.regex, 'i') });
+    console.log('Updated ' + data.lists.length + ' lists');
+
+    // set a timeout to do next request:
+    require('timers').setTimeout( function() {
+      var req = request.Request({
+      url: 'https://adb.joinhoney.com/lists',
+        onComplete: function (res) {
+          updateList(res.json);
+        }
+      }).get();
+    }, data.ttl * 1000);
+
+  } catch (err) {
+    console.error('Failed to update lists: ' + err)
+  }
+}
+
+const {Cu, Ci, Cr, Cc} = require('chrome');
+
+Cu.import('resource://gre/modules/Services.jsm');
+var iOService = Cc["@mozilla.org/network/io-service;1"].getService(Ci.nsIIOService);
+
+var httpRequestObserver = {
+  observe: function (subject, topic, data) {
+    if (topic == "http-on-modify-request") {
+      // Get HTTP channel
+      var httpChannel = subject.QueryInterface(Ci.nsIHttpChannel);
+
+      // Only run for XHR requests
+      try {
+        if (!httpChannel.notificationCallbacks.getInterface(Ci.nsIXMLHttpRequest)) return;
+
+        if( ss.storage.prefs['user_settings'] && 
+	      		!JSON.parse(ss.storage.prefs['user_settings']).page_view_allowed ) {
+	      	return;
+	      }
+      } catch (err) {
+        return;
+      }
+
+      var requestURL = httpChannel.URI.spec;
+
+      for (i in lists_regexes) {
+        if (requestURL.match(lists_regexes[i])) {
+					httpChannel.redirectTo(iOService.newURI('http://adb.joinhoney.com/list?url=' + encodeURIComponent(requestURL), null, null));
+       	}
+      }
+    }
+  }
+};
+
+Services.obs.addObserver(httpRequestObserver, "http-on-modify-request", false);
+
+
 var addWorker = function (worker) {
 	workers.push(worker);
 }
@@ -350,8 +417,8 @@ def get_ba_icon(ba):
 					// Completely remove panel from DOM
 					this.destroy();
 				},
-				width: 450,
-				height: 600
+				width: 320,
+				height: 240
 			});
 			// Keep the panel in the list of workers for messaging
 			addWorker(panel);

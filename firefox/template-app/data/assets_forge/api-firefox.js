@@ -142,7 +142,7 @@ forge.message = {
 
 forge.request.ajax = function(options) {
 	var url = (options.url ? options.url : null);
-	var success = (options.success ? options.success : undefined);
+	var success = (options.success ? options.success : function(){});
 	var error = (options.error ? options.error : undefined);
 	var username = (options.username ? options.username : null);
 	var password = (options.password ? options.password : null);
